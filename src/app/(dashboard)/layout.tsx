@@ -27,6 +27,12 @@ export default async function DashboardLayout({
                 <Link href="/vocabulary" className="text-muted-foreground hover:text-foreground">
                   Vocabulary
                 </Link>
+                <Link href="/games" className="text-muted-foreground hover:text-foreground">
+                  Games
+                </Link>
+                <Link href="/grammar" className="text-muted-foreground hover:text-foreground">
+                  Grammar
+                </Link>
               </nav>
             </div>
             <div className="flex items-center gap-4">
