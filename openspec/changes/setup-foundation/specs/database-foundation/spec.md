@@ -44,7 +44,7 @@ The system SHALL enable RLS on every table created by `001_initial_schema.sql`. 
 
 ### Requirement: Profile creation trigger
 
-The system SHALL create a Postgres function `handle_new_user()` and a trigger on `auth.users` that inserts a corresponding row into `profiles` whenever a new auth user is created. The new profile SHALL default to `level = 'A1'`, `preferred_accent = 'US'`, and `xp = 0`.
+The system SHALL create a Postgres function `handle_new_user()` and a trigger on `auth.users` that inserts a corresponding row into `profiles` whenever a new auth user is created. The new profile SHALL pick up column defaults: `level = 'a1'`, `preferred_accent = 'uk'`, `xp = 0`.
 
 #### Scenario: Profile row is created on signup
 
@@ -58,18 +58,18 @@ The system SHALL create a Postgres function `handle_new_user()` and a trigger on
 
 ### Requirement: SM-2 columns on user_words
 
-The system SHALL include the SM-2 spaced repetition columns (`ease_factor`, `interval_days`, `repetitions`, `due_at`, `last_reviewed_at`) on `user_words` with defaults appropriate for a brand-new card. The Phase 4 algorithm will read and write these columns; Phases 2 and 3 SHALL only insert rows with the defaults and SHALL NOT mutate the SM-2 fields.
+The system SHALL include the SM-2 spaced repetition columns (`ease_factor`, `interval_days`, `repetitions`, `next_review_at`) on `user_words` with defaults appropriate for a brand-new card. The Phase 4 algorithm will read and write these columns; Phases 2 and 3 SHALL only insert rows with the defaults and SHALL NOT mutate the SM-2 fields.
 
 #### Scenario: New saved word starts as a fresh SM-2 card
 
 - **WHEN** a user saves a word for the first time in Phase 2
-- **THEN** the resulting `user_words` row SHALL have `ease_factor = 2.5`, `interval_days = 0`, `repetitions = 0`, and `due_at` set to now (so the card is immediately reviewable once Phase 4 ships)
+- **THEN** the resulting `user_words` row SHALL have `ease_factor = 2.5`, `interval_days = 1`, `repetitions = 0`, and `next_review_at` set to now (so the card is immediately reviewable once Phase 4 ships)
 
 ### Requirement: Indexes for hot queries
 
-The system SHALL create indexes that support the queries Phase 2 onward will run: `user_words(user_id, due_at)` for the review queue, `game_sessions(user_id, created_at desc)` for activity feeds, and a unique index on `words(text)` for dictionary cache lookups.
+The system SHALL create indexes that support the queries Phase 2 onward will run: `user_words(user_id, next_review_at)` for the review queue, `game_sessions(user_id, created_at desc)` for activity feeds, and a `lower(word)` index on `words` for case-insensitive dictionary cache lookups (the `word` column itself carries a `unique` constraint).
 
 #### Scenario: Review queue query uses an index
 
 - **WHEN** the query planner is asked to fetch due `user_words` for a given user
-- **THEN** it SHALL use the `(user_id, due_at)` index rather than a sequential scan
+- **THEN** it SHALL use the `(user_id, next_review_at)` index rather than a sequential scan
