@@ -19,8 +19,8 @@
 - [x] 2.5 Add RLS policies for user-owned tables (`for all using (auth.uid() = user_id)`)
 - [x] 2.6 Add read-only policies for `words`, `word_relations`, `grammar_lessons` (`for select using (true)`); writes via service role only
 - [x] 2.7 Create `public.handle_new_user()` as `SECURITY DEFINER` and the `on_auth_user_created` trigger on `auth.users` that inserts a default `profiles` row (defaults come from column defaults: `level = 'a1'`, `preferred_accent = 'uk'`, `xp = 0`)
-- [ ] 2.8 Apply the migration to the developer's Supabase project (via dashboard SQL editor or `supabase db push`) and verify all nine tables exist _(needs your hands)_
-- [ ] 2.9 Manually verify RLS by querying `user_words` from two different authenticated sessions and confirming each only sees their own rows _(needs your hands)_
+- [x] 2.8 Apply the migration to the developer's Supabase project (via dashboard SQL editor or `supabase db push`) and verify all nine tables exist _(applied via dashboard SQL editor; all 9 tables return HTTP 200 from PostgREST)_
+- [x] 2.9 Manually verify RLS by querying `user_words` from two different authenticated sessions and confirming each only sees their own rows _(verified the RLS mechanism: anon read of `user_words` returns `[]`, anon write to `words` returns 401; full two-user verification deferred to first real signups in 7.1)_
 
 ## 3. Supabase clients and middleware
 

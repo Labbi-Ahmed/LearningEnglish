@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInAction, signInWithGoogleAction } from "./actions";
 
-export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(signInAction, undefined);
+function OAuthErrorBanner() {
   const searchParams = useSearchParams();
-  const oauthError = searchParams.get("error");
+  if (searchParams.get("error") !== "oauth") return null;
+  return (
+    <p className="text-sm font-medium text-destructive">
+      Sign-in with provider failed. Please try again.
+    </p>
+  );
+}
+
+function LoginForm() {
+  const [state, formAction, pending] = useActionState(signInAction, undefined);
 
   return (
     <Card>
@@ -45,10 +53,10 @@ export default function LoginPage() {
           {state?.error && (
             <p className="text-sm font-medium text-destructive">{state.error}</p>
           )}
-          {oauthError && !state?.error && (
-            <p className="text-sm font-medium text-destructive">
-              Sign-in with provider failed. Please try again.
-            </p>
+          {!state?.error && (
+            <Suspense fallback={null}>
+              <OAuthErrorBanner />
+            </Suspense>
           )}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Signing in..." : "Sign in"}
@@ -79,4 +87,8 @@ export default function LoginPage() {
       </CardContent>
     </Card>
   );
+}
+
+export default function LoginPage() {
+  return <LoginForm />;
 }
