@@ -1,0 +1,10 @@
+{
+  "name": "English Learning App",
+  "short_name": "English",
+  "description": "A free English learning app for all levels.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "icons": []
+}
