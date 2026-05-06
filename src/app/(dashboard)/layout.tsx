@@ -14,6 +14,16 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  let dueCount = 0;
+  if (user) {
+    const { count } = await supabase
+      .from("user_words")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .lte("next_review_at", new Date().toISOString());
+    dueCount = Math.min(count ?? 0, 99);
+  }
+
   return (
     <QueryProvider>
       <div className="min-h-screen">
@@ -26,6 +36,17 @@ export default async function DashboardLayout({
               <nav className="flex items-center gap-4 text-sm">
                 <Link href="/vocabulary" className="text-muted-foreground hover:text-foreground">
                   Vocabulary
+                </Link>
+                <Link
+                  href="/review"
+                  className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
+                >
+                  Review
+                  {dueCount > 0 && (
+                    <span className="rounded-full bg-primary text-primary-foreground text-[10px] font-semibold px-1.5 py-0.5 leading-none">
+                      {dueCount}
+                    </span>
+                  )}
                 </Link>
                 <Link href="/games" className="text-muted-foreground hover:text-foreground">
                   Games

@@ -55,23 +55,8 @@ export async function handleGameResult(req: Request, gameType: GameType): Promis
     return NextResponse.json({ error: "save_failed" }, { status: 500 });
   }
 
-  // Coarse mastery hint: correct answers increment mastery_level (capped at 5)
-  const correctIds = data.items.filter((i) => i.correct).map((i) => i.word_id);
-  if (correctIds.length > 0) {
-    const { data: uw } = await supabase
-      .from("user_words")
-      .select("word_id, mastery_level")
-      .eq("user_id", user.id)
-      .in("word_id", correctIds);
-
-    for (const row of (uw ?? []) as { word_id: string; mastery_level: number | null }[]) {
-      await supabase
-        .from("user_words")
-        .update({ mastery_level: Math.min((row.mastery_level ?? 0) + 1, 5) })
-        .eq("user_id", user.id)
-        .eq("word_id", row.word_id);
-    }
-  }
-
+  // Phase 4: SM-2 (`repetitions`/`ease_factor`) is now the mastery signal,
+  // updated by the dedicated review flow. Game results no longer bump
+  // `mastery_level` — it lingers as a derived display value.
   return NextResponse.json({ session_id: session.id }, { status: 201 });
 }
