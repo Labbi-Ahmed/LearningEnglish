@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CefrLevelSchema } from "./placement";
+import { BadgeSchema } from "./engagement";
 
 export const GameStatSchema = z.object({
   plays: z.number().int().min(0),
@@ -34,5 +35,10 @@ export const ProgressDashboardSchema = z.object({
   streak: z.object({
     current_days: z.number().int().min(0),
   }),
+  xp: z.object({
+    total: z.number().int().min(0),
+    this_week: z.number().int().min(0),
+  }),
+  badges: z.array(BadgeSchema),
 });
 export type ProgressDashboard = z.infer<typeof ProgressDashboardSchema>;

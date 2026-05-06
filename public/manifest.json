@@ -1,10 +1,23 @@
 {
   "name": "English Learning App",
   "short_name": "English",
-  "description": "A free English learning app for all levels.",
-  "start_url": "/",
+  "description": "A free English learning app for all levels — vocabulary, grammar, speaking, and more.",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0f172a",
-  "icons": []
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }

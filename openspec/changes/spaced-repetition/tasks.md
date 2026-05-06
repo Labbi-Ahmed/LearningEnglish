@@ -12,13 +12,13 @@
 - [x] 2.1 Create `src/app/api/words/due/route.ts`. Validate query, default `limit=20`, max 50. Return `401` if unauthenticated.
 - [x] 2.2 Query `user_words` joined to `words` where `next_review_at <= now()`, ordered ascending, limited.
 - [x] 2.3 Return `{ items, count: items.length }`.
-- [ ] 2.4 Manual smoke: with no due rows → empty; backdate `next_review_at` on a few rows → they appear.
+- [x] 2.4 Manual smoke: with no due rows → empty; backdate `next_review_at` on a few rows → they appear.
 
 ## 3. FETCH #2 — `POST /api/words/review`
 
 - [x] 3.1 Create `src/app/api/words/review/route.ts`. Validate body. Load the row via the user-session client; if missing → `404`.
 - [x] 3.2 Apply `nextSchedule`, write back the four fields, return the new state.
-- [ ] 3.3 Manual smoke: review a due row with quality=4 → `interval_days` and `next_review_at` shift forward.
+- [x] 3.3 Manual smoke: review a due row with quality=4 → `interval_days` and `next_review_at` shift forward.
 
 ## 4. Review UI
 
@@ -31,6 +31,6 @@
 ## 5. Definition-of-done
 
 - [x] 5.1 Lint / typecheck / test pass.
-- [ ] 5.2 Manual: save 3 words, backdate `next_review_at`, review them; intervals advance.
-- [ ] 5.3 Vercel preview works.
+- [x] 5.2 Manual: save 3 words, backdate `next_review_at`, review them; intervals advance.
+- [x] 5.3 Vercel preview works.
 - [x] 5.4 Update `docs/PHASE_4_SPACED_REPETITION.md`. Tag `v0.1.0` per `Project-plan/fullPlane.md` after merge.

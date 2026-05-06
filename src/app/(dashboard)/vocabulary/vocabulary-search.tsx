@@ -18,6 +18,7 @@ interface LookupResponse {
   example: string | null;
   synonyms: string[];
   antonyms: string[];
+  saved?: boolean;
 }
 
 interface SavedListResponse {
@@ -243,7 +244,13 @@ export function VocabularySearch({
           alreadySaved
         />
       ) : (
-        lookup.data && <WordCard key={lookup.data.word} word={lookup.data} />
+        lookup.data && (
+          <WordCard
+            key={lookup.data.word}
+            word={lookup.data}
+            alreadySaved={lookup.data.saved === true}
+          />
+        )
       )}
     </div>
   );

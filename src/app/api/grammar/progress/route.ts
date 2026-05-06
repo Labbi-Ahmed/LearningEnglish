@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ProgressBodySchema } from "@/lib/schemas/grammar";
+import { grantXp } from "@/lib/engagement/xp";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -56,5 +57,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "save_failed" }, { status: 500 });
   }
 
+  if (setCompletedAt) {
+    await grantXp(supabase, { userId: user.id, source: "lesson", refId: lesson_id });
+  }
   return NextResponse.json({ ok: true, score: newScore, completed: newCompleted }, { status: 200 });
 }

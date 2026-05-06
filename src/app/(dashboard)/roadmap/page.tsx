@@ -85,6 +85,8 @@ async function fetchStats(): Promise<ProgressDashboard | null> {
     speaking: { attempts: speakingRows.length, avg_accuracy: null },
     ai: { conversations: aiCountRes.count ?? 0 },
     streak: { current_days: 0 },
+    xp: { total: 0, this_week: 0 },
+    badges: [],
   };
 }
 

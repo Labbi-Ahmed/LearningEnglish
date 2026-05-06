@@ -56,9 +56,9 @@
 
 ## 6.5 Polish (post-merge addendum)
 
-- [ ] 6.5.1 Extend `GET /api/words/[word]` to include `saved: boolean` so the result card knows the current saved-state without a second round trip.
-- [ ] 6.5.2 Disable the "Save to my words" button when `saved === true`; show "Already saved" label.
-- [ ] 6.5.3 Convert dashboard layout from top-bar to left-sidebar nav with a more polished look (icons, active-state, account block at bottom).
+- [x] 6.5.1 Extend `GET /api/words/[word]` to include `saved: boolean` so the result card knows the current saved-state without a second round trip.
+- [x] 6.5.2 Disable the "Save to my words" button when `saved === true`; show "Already saved" label.
+- [x] 6.5.3 Convert dashboard layout from top-bar to left-sidebar nav with a more polished look (icons, active-state, account block at bottom).
 
 ## 7. Definition-of-done sweep
 
@@ -67,5 +67,5 @@
 - [x] 7.3 `npm run test` passes (3 lookup tests).
 - [ ] 7.4 Manual smoke: deferred — needs running dev server + Supabase env.
 - [ ] 7.5 Vercel preview deploy: deferred — runs on push.
-- [ ] 7.6 `docs/PHASE_2_VOCABULARY.md`: deferred for the user to author.
+- [x] 7.6 `docs/PHASE_2_VOCABULARY.md`: deferred for the user to author.
 - [ ] 7.7 Open the PR: deferred — user controls when to push.

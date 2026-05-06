@@ -36,6 +36,13 @@ export async function GET(
 
   try {
     const cached = await upsertWordFromDictionary(parsed.data);
+
+    const { count } = await supabase
+      .from("user_words")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("word_id", cached.id);
+
     return NextResponse.json({
       word: cached.word,
       pos: cached.pos,
@@ -46,6 +53,7 @@ export async function GET(
       synonyms: cached.synonyms,
       antonyms: cached.antonyms,
       word_id: cached.id,
+      saved: (count ?? 0) > 0,
     });
   } catch (err) {
     if (err instanceof WordNotFoundError) {
