@@ -75,7 +75,7 @@ export function VocabularySearch({
         </p>
       )}
 
-      {query.data && <WordCard word={query.data} />}
+      {query.data && <WordCard key={query.data.word} word={query.data} />}
     </div>
   );
 }
@@ -153,14 +153,20 @@ function WordCard({ word }: { word: LookupResponse }) {
           <Button size="sm" variant="outline" onClick={() => speak(word.word, "us")}>
             Play US
           </Button>
-          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending ? "Saving…" : "Save to my words"}
-          </Button>
+          {status !== "saved" && status !== "already" && (
+            <Button
+              size="sm"
+              onClick={() => save.mutate()}
+              disabled={save.isPending}
+            >
+              {save.isPending ? "Saving…" : "Save to my words"}
+            </Button>
+          )}
           {status === "saved" && (
-            <span className="self-center text-sm text-muted-foreground">Saved.</span>
+            <span className="self-center text-sm text-muted-foreground">✓ Saved</span>
           )}
           {status === "already" && (
-            <span className="self-center text-sm text-muted-foreground">Already in your bank.</span>
+            <span className="self-center text-sm text-muted-foreground">Already in your bank</span>
           )}
           {status === "error" && (
             <span className="self-center text-sm text-destructive">Save failed — try again.</span>

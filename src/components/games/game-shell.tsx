@@ -51,7 +51,9 @@ export function GameShell({ items, renderItem, onSubmit }: GameShellProps) {
     (correct: boolean) => {
       setResults((prev) => {
         if (prev.length >= items.length) return prev;
-        return [...prev, { word_id: items[prev.length].word_id, correct }];
+        const next = items[prev.length];
+        if (!next) return prev;
+        return [...prev, { word_id: next.word_id, correct }];
       });
     },
     [items],
@@ -98,7 +100,7 @@ export function GameShell({ items, renderItem, onSubmit }: GameShellProps) {
           style={{ width: `${(results.length / items.length) * 100}%` }}
         />
       </div>
-      {renderItem(items[index], handleAnswer)}
+      {items[index] && renderItem(items[index]!, handleAnswer)}
     </div>
   );
 }

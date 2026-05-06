@@ -41,6 +41,7 @@ function SentenceItem({
   const pickFromPool = (i: number) => {
     if (answered) return;
     const token = pool[i];
+    if (token === undefined) return;
     setPool((p) => p.filter((_, idx) => idx !== i));
     setBuilt((b) => [...b, token]);
   };
@@ -48,6 +49,7 @@ function SentenceItem({
   const returnToPool = (i: number) => {
     if (answered) return;
     const token = built[i];
+    if (token === undefined) return;
     setBuilt((b) => b.filter((_, idx) => idx !== i));
     setPool((p) => [...p, token]);
   };

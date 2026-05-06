@@ -1,6 +1,8 @@
--- 003_grammar_seed.sql
+-- 0010_grammar_lessons_seed.sql
 -- Seeds 16 grammar lessons (12 tenses + 4 foundational topics).
 -- Idempotent: ON CONFLICT (slug) DO NOTHING.
+-- Depends on: 0006_grammar_lessons.sql
+-- Verify after running: select count(*) from grammar_lessons; -- expect >= 16
 
 -- ─────────────────────────────────────────────────────────────────────
 -- A1 TENSES

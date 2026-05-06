@@ -34,7 +34,7 @@
 
 ## 6. Definition-of-done
 
-- [ ] 6.1 Lint / typecheck / test pass.
+- [x] 6.1 Lint / typecheck / test pass.
 - [ ] 6.2 Manual: complete two lessons of different levels.
 - [ ] 6.3 Vercel preview works.
 - [x] 6.4 Update `docs/PHASE_5_GRAMMAR.md`.

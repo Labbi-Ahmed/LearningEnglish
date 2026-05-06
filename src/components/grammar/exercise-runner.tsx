@@ -98,24 +98,27 @@ function Reorder({
   submitted: boolean;
   correct: boolean;
 }) {
+  const safeValue = Array.isArray(value) ? value : [];
+
   const pool = useMemo(
-    () => shuffled.filter((t, i) => shuffled.indexOf(t) === i || !value.includes(t)),
+    () => shuffled.filter((t, i) => shuffled.indexOf(t) === i || !safeValue.includes(t)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
   const available = pool.filter(
-    (t) => value.filter((v) => v === t).length < shuffled.filter((s) => s === t).length,
+    (t) =>
+      safeValue.filter((v) => v === t).length < shuffled.filter((s) => s === t).length,
   );
 
   const pick = (token: string) => {
     if (submitted) return;
-    onChange([...value, token]);
+    onChange([...safeValue, token]);
   };
 
   const remove = (i: number) => {
     if (submitted) return;
-    onChange(value.filter((_, idx) => idx !== i));
+    onChange(safeValue.filter((_, idx) => idx !== i));
   };
 
   return (
@@ -172,7 +175,9 @@ type ExerciseRunnerProps = {
 };
 
 export function ExerciseRunner({ lessonId, exercises, onComplete }: ExerciseRunnerProps) {
-  const [answers, setAnswers] = useState<Answer[]>(() => exercises.map(() => ""));
+  const [answers, setAnswers] = useState<Answer[]>(() =>
+    exercises.map((ex) => (ex.type === "reorder" ? [] : "")),
+  );
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [results, setResults] = useState<boolean[]>([]);
@@ -217,7 +222,7 @@ export function ExerciseRunner({ lessonId, exercises, onComplete }: ExerciseRunn
       <h2 className="text-lg font-semibold">Exercises</h2>
 
       {exercises.map((ex, i) => {
-        const correct = submitted ? results[i] : false;
+        const correct = submitted ? (results[i] ?? false) : false;
         return (
           <div key={i} className="space-y-2">
             <div className="flex items-center gap-2">

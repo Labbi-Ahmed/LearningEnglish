@@ -7,7 +7,8 @@ function normalise(s: string): string {
 export function scoreItem(item: ExerciseItem, answer: string | string[]): boolean {
   switch (item.type) {
     case "fill_in_blank": {
-      const userAnswer = normalise(Array.isArray(answer) ? answer[0] : answer);
+      const raw = Array.isArray(answer) ? (answer[0] ?? "") : answer;
+      const userAnswer = normalise(raw);
       const accepted = Array.isArray(item.answer)
         ? item.answer.map(normalise)
         : [normalise(item.answer)];
@@ -21,7 +22,7 @@ export function scoreItem(item: ExerciseItem, answer: string | string[]): boolea
       const userOrder = Array.isArray(answer) ? answer : [answer];
       return (
         userOrder.length === item.prompt.length &&
-        userOrder.every((token, i) => normalise(token) === normalise(item.prompt[i]))
+        userOrder.every((token, i) => normalise(token) === normalise(item.prompt[i] ?? ""))
       );
     }
   }

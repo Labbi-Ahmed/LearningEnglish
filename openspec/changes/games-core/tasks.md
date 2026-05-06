@@ -46,7 +46,7 @@
 
 ## 8. Definition-of-done
 
-- [ ] 8.1 `npm run lint` / `npm run typecheck` / `npm run test` pass.
+- [x] 8.1 `npm run lint` / `npm run typecheck` / `npm run test` pass.
 - [ ] 8.2 Manual: play one round of each game; hub reflects last scores.
 - [ ] 8.3 Vercel preview works.
 - [x] 8.4 Update `docs/PHASE_3_GAMES.md`.

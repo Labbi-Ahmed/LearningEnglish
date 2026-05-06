@@ -38,7 +38,7 @@ export default async function GamesPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let lastByType = new Map<string, GameSession>();
+  const lastByType = new Map<string, GameSession>();
 
   if (user) {
     const { data } = await supabase
