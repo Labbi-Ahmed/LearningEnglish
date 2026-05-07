@@ -21,7 +21,11 @@ async function fetchSaved(q: string): Promise<ListResponse> {
   return res.json();
 }
 
-export function SavedWordsList() {
+export function SavedWordsList({
+  onViewDetails,
+}: {
+  onViewDetails?: (item: SavedWordItem) => void;
+}) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -77,14 +81,20 @@ export function SavedWordsList() {
 
       {list.data && list.data.items.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          No saved words yet — look one up above to start your bank.
+          {debounced
+            ? `No saved words match "${debounced}".`
+            : "No saved words yet — look one up above to start your bank."}
         </p>
       )}
 
       {list.data && list.data.items.length > 0 && (
         <ul className="divide-y rounded-md border">
           {list.data.items.map((item) => (
-            <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-3">
+            <li
+              key={item.id}
+              className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => onViewDetails?.(item)}
+            >
               <div className="min-w-0">
                 <div className="flex items-baseline gap-2">
                   <span className="font-medium">{item.word}</span>
@@ -96,7 +106,7 @@ export function SavedWordsList() {
                   <p className="truncate text-sm text-muted-foreground">{item.meaning}</p>
                 )}
               </div>
-              <div className="flex shrink-0 gap-1">
+              <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
                 <Button
                   size="sm"
                   variant="ghost"

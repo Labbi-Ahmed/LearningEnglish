@@ -65,9 +65,13 @@ function savedToLookup(item: SavedWordItem): LookupResponse {
 export function VocabularySearch({
   activeWord,
   onSearch,
+  externalSaved,
+  onClearExternalSaved,
 }: {
   activeWord: string | null;
   onSearch: (w: string | null) => void;
+  externalSaved?: SavedWordItem | null;
+  onClearExternalSaved?: () => void;
 }) {
   const [input, setInput] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -94,10 +98,12 @@ export function VocabularySearch({
     setHighlight(-1);
   }, [items.length, debounced]);
 
+  const displaySaved = externalSaved ?? selectedSaved;
+
   const lookup = useQuery<LookupResponse, Error>({
     queryKey: ["word", activeWord],
     queryFn: () => fetchWord(activeWord as string),
-    enabled: Boolean(activeWord) && !selectedSaved,
+    enabled: Boolean(activeWord) && !selectedSaved && !externalSaved,
     retry: false,
   });
 
@@ -118,6 +124,7 @@ export function VocabularySearch({
   const submit = () => {
     const next = input.trim().toLowerCase();
     if (!next) return;
+    onClearExternalSaved?.();
     if (highlight >= 0 && items[highlight]) {
       pickSaved(items[highlight]);
       return;
@@ -166,6 +173,8 @@ export function VocabularySearch({
               setInput(e.target.value);
               setOpen(true);
               if (selectedSaved) setSelectedSaved(null);
+              if (externalSaved) onClearExternalSaved?.();
+              if (activeWord) onSearch(null);
             }}
             onFocus={() => setOpen(true)}
             onBlur={() => {
@@ -227,22 +236,22 @@ export function VocabularySearch({
         <Button type="submit">Look up</Button>
       </form>
 
-      {!selectedSaved && lookup.isFetching && (
+      {!displaySaved && lookup.isFetching && (
         <p className="text-sm text-muted-foreground">Looking up…</p>
       )}
-      {!selectedSaved && lookup.isError && lookup.error.message === "word_not_found" && (
+      {!displaySaved && lookup.isError && lookup.error.message === "word_not_found" && (
         <p className="text-sm text-muted-foreground">
           We couldn&apos;t find that word — check the spelling.
         </p>
       )}
-      {!selectedSaved && lookup.isError && lookup.error.message !== "word_not_found" && (
+      {!displaySaved && lookup.isError && lookup.error.message !== "word_not_found" && (
         <p className="text-sm text-destructive">
           The dictionary is unavailable right now. Please try again in a moment.
         </p>
       )}
 
-      {selectedSaved ? (
-        <WordCard key={`saved-${selectedSaved.id}`} word={savedToLookup(selectedSaved)} alreadySaved />
+      {displaySaved ? (
+        <WordCard key={`saved-${displaySaved.id}`} word={savedToLookup(displaySaved)} alreadySaved />
       ) : (
         lookup.data && (
           <WordCard key={lookup.data.word} word={lookup.data} alreadySaved={lookup.data.saved === true} />
