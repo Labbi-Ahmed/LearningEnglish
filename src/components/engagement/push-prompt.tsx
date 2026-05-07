@@ -53,14 +53,24 @@ export function PushPrompt() {
   }, []);
 
   async function subscribe() {
-    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
     if (!vapidKey) {
-      setErrorMsg("Push notifications are not configured.");
+      setErrorMsg("Push notifications are not configured (missing VAPID key).");
       return;
     }
 
     setState("loading");
     setErrorMsg(null);
+
+    let appServerKey: ArrayBuffer;
+    try {
+      appServerKey = urlBase64ToUint8Array(vapidKey);
+    } catch (err) {
+      console.error("[push] invalid VAPID key", err);
+      setErrorMsg("Push key is malformed. Please contact support.");
+      setState("idle");
+      return;
+    }
 
     try {
       const reg = await getActiveRegistration();
@@ -71,7 +81,7 @@ export function PushPrompt() {
 
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        applicationServerKey: appServerKey,
       });
       setSubscription(sub);
 
@@ -86,19 +96,30 @@ export function PushPrompt() {
       });
 
       if (!res.ok) {
-        setErrorMsg("Failed to save subscription. Try again.");
+        const detail =
+          res.status === 401
+            ? "Please sign in again."
+            : `Failed to save subscription (HTTP ${res.status}).`;
+        setErrorMsg(detail);
         setState("idle");
         return;
       }
 
       setState("subscribed");
     } catch (err) {
-      if (err instanceof DOMException && err.name === "NotAllowedError") {
-        setState("denied");
-      } else {
-        setErrorMsg("Something went wrong. Please try again.");
+      console.error("[push] subscribe failed", err);
+      if (err instanceof DOMException) {
+        if (err.name === "NotAllowedError") {
+          setState("denied");
+          return;
+        }
+        setErrorMsg(`${err.name}: ${err.message}`);
         setState("idle");
+        return;
       }
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setErrorMsg(`Something went wrong: ${message}`);
+      setState("idle");
     }
   }
 

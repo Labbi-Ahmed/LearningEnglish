@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { INPUT_CAPS } from "@/lib/quotas/limits";
+
+const MAX_RECORD_SECONDS: number = INPUT_CAPS.speaking_attempt.seconds;
 
 // Web Speech API types (not yet in all TS lib.dom versions)
 type SRAlternative = { transcript: string };
@@ -44,6 +47,8 @@ export function Recorder({ prompts }: { prompts: string[] }) {
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(MAX_RECORD_SECONDS);
 
   const prompt = prompts[promptIndex % prompts.length];
 
@@ -92,10 +97,22 @@ export function Recorder({ prompts }: { prompts: string[] }) {
     };
     rec.start();
     setRecording(true);
+    setSecondsLeft(MAX_RECORD_SECONDS);
+    timerRef.current = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+          void stopRecording();
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
   }
 
   async function stopRecording() {
     setRecording(false);
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     recognitionRef.current?.stop();
     mediaRef.current?.stop();
 
@@ -111,6 +128,11 @@ export function Recorder({ prompts }: { prompts: string[] }) {
       form.append("audio", audioBlob, "recording.webm");
 
       const uploadRes = await fetch("/api/speaking/upload", { method: "POST", body: form });
+      if (uploadRes.status === 429) {
+        const data = (await uploadRes.json()) as { limit: number };
+        setError(`You've used today's free speaking attempts (${data.limit}). Pro and Pro Max plans coming soon.`);
+        return;
+      }
       if (!uploadRes.ok) { setError("Upload failed."); return; }
       const { recording_id } = (await uploadRes.json()) as { recording_id: string };
 
@@ -185,7 +207,7 @@ export function Recorder({ prompts }: { prompts: string[] }) {
           </Button>
         ) : (
           <Button variant="destructive" onClick={stopRecording}>
-            Stop & score
+            Stop & score · {secondsLeft}s left
           </Button>
         )}
         <Button

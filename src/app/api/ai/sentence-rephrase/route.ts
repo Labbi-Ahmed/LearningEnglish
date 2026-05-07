@@ -7,6 +7,8 @@ import {
   AIUnavailableError,
   AIParseError,
 } from "@/lib/gemini";
+import { assertWithinQuota } from "@/lib/quotas/enforce";
+import { QuotaExceededError } from "@/lib/quotas/errors";
 import { createHash } from "crypto";
 
 export async function POST(req: Request) {
@@ -39,6 +41,16 @@ export async function POST(req: Request) {
     if (age < 24 * 60 * 60 * 1000) {
       return NextResponse.json({ alternates: cached.alternates }, { status: 200 });
     }
+  }
+
+  // Quota only counts on a cache miss (a real Gemini call).
+  try {
+    await assertWithinQuota(supabase, user.id, "ai_rephrase");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      return NextResponse.json(err.toResponseBody(), { status: 429 });
+    }
+    return NextResponse.json({ error: "quota_check_failed" }, { status: 500 });
   }
 
   let alternates: string[];

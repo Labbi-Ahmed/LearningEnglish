@@ -1,16 +1,30 @@
 import { z } from "zod";
+import { INPUT_CAPS } from "@/lib/quotas/limits";
+
+export const wordCount = (s: string): number => {
+  const trimmed = s.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+};
+
+const cappedString = (caps: { words: number; chars: number }) =>
+  z
+    .string()
+    .min(1)
+    .max(caps.chars, { message: `chars_over_${caps.chars}` })
+    .refine((s) => wordCount(s) <= caps.words, { message: `words_over_${caps.words}` });
 
 export const ChatBodySchema = z.object({
   conversation_id: z.string().uuid().optional(),
-  message: z.string().min(1).max(4000),
+  message: cappedString(INPUT_CAPS.ai_chat),
 });
 
 export const WritingFeedbackBodySchema = z.object({
-  text: z.string().min(1, "empty_text").max(2000),
+  text: cappedString(INPUT_CAPS.ai_feedback),
 });
 
 export const RephraseBodySchema = z.object({
-  sentence: z.string().min(1).max(500),
+  sentence: cappedString(INPUT_CAPS.ai_rephrase),
   style: z.enum(["formal", "casual", "simple"]),
 });
 
