@@ -52,6 +52,10 @@ export async function GET(
       example: cached.example,
       synonyms: cached.synonyms,
       antonyms: cached.antonyms,
+      meaning_bn: cached.meaning_bn,
+      example_bn: cached.example_bn,
+      synonyms_bn: cached.synonyms_bn,
+      antonyms_bn: cached.antonyms_bn,
       word_id: cached.id,
       saved: (count ?? 0) > 0,
     });

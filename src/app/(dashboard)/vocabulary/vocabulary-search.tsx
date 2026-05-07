@@ -18,6 +18,10 @@ interface LookupResponse {
   example: string | null;
   synonyms: string[];
   antonyms: string[];
+  meaning_bn: string | null;
+  example_bn: string | null;
+  synonyms_bn: string[];
+  antonyms_bn: string[];
   saved?: boolean;
 }
 
@@ -51,6 +55,10 @@ function savedToLookup(item: SavedWordItem): LookupResponse {
     example: null,
     synonyms: [],
     antonyms: [],
+    meaning_bn: null,
+    example_bn: null,
+    synonyms_bn: [],
+    antonyms_bn: [],
   };
 }
 
@@ -82,7 +90,6 @@ export function VocabularySearch({
 
   const items = useMemo(() => suggestions.data ?? [], [suggestions.data]);
 
-  // Reset highlight when items change
   useEffect(() => {
     setHighlight(-1);
   }, [items.length, debounced]);
@@ -105,13 +112,12 @@ export function VocabularySearch({
     setInput(item.word);
     setOpen(false);
     setHighlight(-1);
-    onSearch(null); // cancel any in-flight lookup card
+    onSearch(null);
   };
 
   const submit = () => {
     const next = input.trim().toLowerCase();
     if (!next) return;
-
     if (highlight >= 0 && items[highlight]) {
       pickSaved(items[highlight]);
       return;
@@ -163,7 +169,6 @@ export function VocabularySearch({
             }}
             onFocus={() => setOpen(true)}
             onBlur={() => {
-              // Allow click on suggestion to register first
               if (blurTimer.current) clearTimeout(blurTimer.current);
               blurTimer.current = setTimeout(() => setOpen(false), 120);
             }}
@@ -225,7 +230,6 @@ export function VocabularySearch({
       {!selectedSaved && lookup.isFetching && (
         <p className="text-sm text-muted-foreground">Looking up…</p>
       )}
-
       {!selectedSaved && lookup.isError && lookup.error.message === "word_not_found" && (
         <p className="text-sm text-muted-foreground">
           We couldn&apos;t find that word — check the spelling.
@@ -238,18 +242,10 @@ export function VocabularySearch({
       )}
 
       {selectedSaved ? (
-        <WordCard
-          key={`saved-${selectedSaved.id}`}
-          word={savedToLookup(selectedSaved)}
-          alreadySaved
-        />
+        <WordCard key={`saved-${selectedSaved.id}`} word={savedToLookup(selectedSaved)} alreadySaved />
       ) : (
         lookup.data && (
-          <WordCard
-            key={lookup.data.word}
-            word={lookup.data}
-            alreadySaved={lookup.data.saved === true}
-          />
+          <WordCard key={lookup.data.word} word={lookup.data} alreadySaved={lookup.data.saved === true} />
         )
       )}
     </div>
@@ -276,6 +272,15 @@ function WordCard({
   const [status, setStatus] = useState<"idle" | "saved" | "already" | "error">(
     alreadySaved ? "already" : "idle",
   );
+  const [lang, setLang] = useState<"en" | "bn">("en");
+
+  const hasBn = Boolean(word.meaning_bn);
+
+  const displayMeaning  = lang === "bn" && word.meaning_bn  ? word.meaning_bn  : word.meaning;
+  const displayExample  = lang === "bn" && word.example_bn  ? word.example_bn  : word.example;
+  const displaySynonyms = lang === "bn" && word.synonyms_bn.length > 0 ? word.synonyms_bn : word.synonyms;
+  const displayAntonyms = lang === "bn" && word.antonyms_bn.length > 0 ? word.antonyms_bn : word.antonyms;
+  const meaningLabel    = lang === "bn" ? "অর্থ" : "Meaning";
 
   const save = useMutation({
     mutationFn: async () => {
@@ -324,6 +329,7 @@ function WordCard({
       qc.invalidateQueries({ queryKey: ["saved-words"] });
     },
   });
+
   return (
     <Card>
       <CardHeader>
@@ -339,6 +345,7 @@ function WordCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Action buttons */}
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => speak(word.word, "uk")}>
             Play UK
@@ -347,11 +354,7 @@ function WordCard({
             Play US
           </Button>
           {status !== "saved" && status !== "already" && (
-            <Button
-              size="sm"
-              onClick={() => save.mutate()}
-              disabled={save.isPending}
-            >
+            <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending ? "Saving…" : "Save to my words"}
             </Button>
           )}
@@ -365,25 +368,55 @@ function WordCard({
             <span className="self-center text-sm text-destructive">Save failed — try again.</span>
           )}
         </div>
-        {word.meaning && (
+
+        {/* Language toggle — only when Bangla data is available */}
+        {hasBn && (
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant={lang === "en" ? "default" : "outline"}
+              className="h-7 px-3 text-xs"
+              onClick={() => setLang("en")}
+            >
+              EN
+            </Button>
+            <Button
+              size="sm"
+              variant={lang === "bn" ? "default" : "outline"}
+              className="h-7 px-3 text-xs"
+              onClick={() => setLang("bn")}
+            >
+              বাং
+            </Button>
+          </div>
+        )}
+
+        {/* Meaning */}
+        {displayMeaning && (
           <p>
-            <span className="font-medium">Meaning. </span>
-            {word.meaning}
+            <span className="font-medium">{meaningLabel}. </span>
+            {displayMeaning}
           </p>
         )}
-        {word.example && (
-          <p className="italic text-muted-foreground">&ldquo;{word.example}&rdquo;</p>
+
+        {/* Example */}
+        {displayExample && (
+          <p className="italic text-muted-foreground">&ldquo;{displayExample}&rdquo;</p>
         )}
-        {word.synonyms.length > 0 && (
+
+        {/* Synonyms */}
+        {displaySynonyms.length > 0 && (
           <p className="text-sm">
             <span className="font-medium">Synonyms: </span>
-            {word.synonyms.slice(0, 8).join(", ")}
+            {displaySynonyms.slice(0, 8).join(", ")}
           </p>
         )}
-        {word.antonyms.length > 0 && (
+
+        {/* Antonyms */}
+        {displayAntonyms.length > 0 && (
           <p className="text-sm">
             <span className="font-medium">Antonyms: </span>
-            {word.antonyms.slice(0, 8).join(", ")}
+            {displayAntonyms.slice(0, 8).join(", ")}
           </p>
         )}
       </CardContent>
