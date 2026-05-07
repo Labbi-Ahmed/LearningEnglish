@@ -14,6 +14,12 @@ Supabase project via the dashboard's SQL editor.
 - **Never edit a file once it has been applied to any environment**. Add a new
   numbered file instead.
 - **Numbering**: pad to 4 digits. Reserve gaps if a phase has multiple migrations.
+- **Per-user tables MUST cascade**: any new table that stores per-user rows
+  must declare `references auth.users(id) on delete cascade` (or
+  `references profiles(id) on delete cascade`) so admin hard-delete keeps
+  working. Global / shared tables (e.g. `words`, `word_relations`,
+  `grammar_lessons`, `ai_rephrase_cache`) intentionally have no user FK and
+  must survive deletion.
 
 ## Order (current + planned)
 

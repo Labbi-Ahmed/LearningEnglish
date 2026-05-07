@@ -32,7 +32,9 @@ Free-tier daily limits live in `src/lib/quotas/limits.ts`. To change a number an
 
 ## Promoting a user
 
-There is no admin UI yet. Run the SQL directly against the Supabase project (Dashboard → SQL Editor):
+Authors get an admin UI at `/admin/users` (see `docs/ADMIN.md`). Promotion to `author`
+itself is still done by service-role SQL — there is no in-app way to grant the role.
+Run the SQL directly against the Supabase project (Dashboard → SQL Editor):
 
 ```sql
 -- Promote yourself to author (no limits)

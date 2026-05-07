@@ -6,7 +6,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { MobileNav } from "@/components/nav/mobile-nav";
 import { signOutAction } from "./actions";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: "/dashboard",   label: "Dashboard",   icon: "🏠" },
   { href: "/vocabulary",  label: "Vocabulary",   icon: "📖" },
   { href: "/review",      label: "Review",       icon: "🔄" },
@@ -21,6 +21,8 @@ const NAV_ITEMS = [
   { href: "/profile",     label: "Profile",      icon: "👤" },
 ] as const;
 
+const ADMIN_NAV_ITEM = { href: "/admin/users", label: "Admin", icon: "🛡️" } as const;
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -31,6 +33,7 @@ export default async function DashboardLayout({
 
   let dueCount = 0;
   let profile: { first_name: string | null; last_name: string | null; avatar_url: string | null } | null = null;
+  let isAuthor = false;
   if (user) {
     const { count } = await supabase
       .from("user_words")
@@ -45,7 +48,16 @@ export default async function DashboardLayout({
       .eq("id", user.id)
       .single();
     profile = data;
+
+    const { data: sub } = await supabase
+      .from("user_subscriptions")
+      .select("tier")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    isAuthor = (sub as { tier?: string } | null)?.tier === "author";
   }
+
+  const NAV_ITEMS = isAuthor ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS;
 
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   const displayName = fullName || user?.email?.split("@")[0] || "Account";

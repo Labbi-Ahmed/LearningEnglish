@@ -37,6 +37,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_active")
+      .eq("id", user.id)
+      .maybeSingle();
+    const isActive = (profile as { is_active?: boolean } | null)?.is_active ?? true;
+    if (!isActive) {
+      await supabase.auth.signOut();
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json(
+          { error: "account_suspended" },
+          { status: 403 },
+        );
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("suspended", "1");
+      return NextResponse.redirect(url);
+    }
+  }
+
   if (user && (pathname === "/login" || pathname === "/signup")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
