@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ChatBodySchema } from "@/lib/schemas/ai";
 import { generateChat, AIQuotaError, AIUnavailableError } from "@/lib/gemini";
 import { grantXp } from "@/lib/engagement/xp";
+import { assertWithinQuota } from "@/lib/quotas/enforce";
+import { QuotaExceededError } from "@/lib/quotas/errors";
 
 type Turn = { role: "user" | "model"; content: string };
 
@@ -21,6 +23,15 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  try {
+    await assertWithinQuota(supabase, user.id, "ai_chat");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      return NextResponse.json(err.toResponseBody(), { status: 429 });
+    }
+    return NextResponse.json({ error: "quota_check_failed" }, { status: 500 });
+  }
 
   let convId = conversation_id;
   let history: Turn[] = [];

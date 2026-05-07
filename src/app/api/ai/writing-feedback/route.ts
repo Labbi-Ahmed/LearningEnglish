@@ -7,6 +7,8 @@ import {
   AIUnavailableError,
   AIParseError,
 } from "@/lib/gemini";
+import { assertWithinQuota } from "@/lib/quotas/enforce";
+import { QuotaExceededError } from "@/lib/quotas/errors";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -29,6 +31,15 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  try {
+    await assertWithinQuota(supabase, user.id, "ai_feedback");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      return NextResponse.json(err.toResponseBody(), { status: 429 });
+    }
+    return NextResponse.json({ error: "quota_check_failed" }, { status: 500 });
+  }
 
   let raw: Awaited<ReturnType<typeof generateWritingFeedback>>;
   try {

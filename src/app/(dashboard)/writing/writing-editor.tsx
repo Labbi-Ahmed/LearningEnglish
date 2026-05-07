@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { WritingFeedbackResponse, FeedbackIssue } from "@/lib/schemas/ai";
+import { INPUT_CAPS } from "@/lib/quotas/limits";
+
+const FB_CAP = INPUT_CAPS.ai_feedback;
+
+function countWords(s: string): number {
+  const t = s.trim();
+  return t ? t.split(/\s+/).length : 0;
+}
 
 type RephraseState = {
   open: boolean;
@@ -42,6 +50,11 @@ export function WritingEditor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
+      if (res.status === 429) {
+        const data = (await res.json()) as { limit: number };
+        setFbError(`You've used today's free writing checks (${data.limit}). Pro and Pro Max plans coming soon.`);
+        return;
+      }
       if (res.status === 503) { setFbError("AI is busy, try again in a minute."); return; }
       if (!res.ok) { setFbError("Something went wrong."); return; }
       setFeedback((await res.json()) as WritingFeedbackResponse);
@@ -69,6 +82,12 @@ export function WritingEditor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sentence: rephrase.sentence, style: rephrase.style }),
       });
+      if (res.status === 429) {
+        const body = (await res.json()) as { limit: number };
+        setRephrase((r) => ({ ...r, loading: false }));
+        setFbError(`You've used today's free rephrase calls (${body.limit}). Pro and Pro Max plans coming soon.`);
+        return;
+      }
       if (!res.ok) { setRephrase((r) => ({ ...r, loading: false })); return; }
       const data = (await res.json()) as { alternates: string[] };
       setRephrase((r) => ({ ...r, loading: false, alternates: data.alternates }));
@@ -86,19 +105,38 @@ export function WritingEditor() {
     <div className="space-y-4">
       <textarea
         className="w-full rounded-lg border bg-background p-3 text-sm min-h-[180px] focus:outline-none focus:ring-2 focus:ring-ring resize-y"
-        placeholder="Write or paste your English text here… (max 2000 characters)"
-        maxLength={2000}
+        placeholder={`Write or paste your English text here… (max ${FB_CAP.words} words / ${FB_CAP.chars} chars)`}
+        maxLength={FB_CAP.chars + 50}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <div className="flex gap-2">
-        <Button onClick={getFeedback} disabled={fbLoading || text.trim().length === 0}>
-          {fbLoading ? "Analysing…" : "Get feedback"}
-        </Button>
-        <Button variant="outline" onClick={openRephrase} disabled={text.trim().length === 0}>
-          Rephrase sentence
-        </Button>
-      </div>
+      {(() => {
+        const wc = countWords(text);
+        const cc = text.length;
+        const overW = wc > FB_CAP.words;
+        const overC = cc > FB_CAP.chars;
+        const overCap = overW || overC;
+        return (
+          <>
+            <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums px-0.5 -mt-3">
+              <span className={overW ? "text-destructive font-medium" : ""}>
+                {wc} / {FB_CAP.words} words
+              </span>
+              <span className={overC ? "text-destructive font-medium" : ""}>
+                {cc} / {FB_CAP.chars} chars
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={getFeedback} disabled={fbLoading || text.trim().length === 0 || overCap}>
+                {fbLoading ? "Analysing…" : "Get feedback"}
+              </Button>
+              <Button variant="outline" onClick={openRephrase} disabled={text.trim().length === 0}>
+                Rephrase sentence
+              </Button>
+            </div>
+          </>
+        );
+      })()}
 
       {fbError && <p className="text-sm text-destructive">{fbError}</p>}
 

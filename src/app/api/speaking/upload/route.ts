@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { assertWithinQuota } from "@/lib/quotas/enforce";
+import { QuotaExceededError } from "@/lib/quotas/errors";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_MIME = /^audio\//;
@@ -8,6 +10,15 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  try {
+    await assertWithinQuota(supabase, user.id, "speaking_attempt");
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      return NextResponse.json(err.toResponseBody(), { status: 429 });
+    }
+    return NextResponse.json({ error: "quota_check_failed" }, { status: 500 });
+  }
 
   const contentType = req.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
