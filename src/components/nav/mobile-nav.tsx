@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
+import { ProBadge } from "@/components/pro-badge";
 
 type NavItem = {
   href: string;
@@ -18,6 +20,7 @@ type Props = {
   initials: string;
   avatarUrl: string | null;
   signOutAction: () => void | Promise<void>;
+  isFree: boolean;
 };
 
 export function MobileNav({
@@ -28,7 +31,9 @@ export function MobileNav({
   initials,
   avatarUrl,
   signOutAction,
+  isFree,
 }: Props) {
+  const PRO_LOCKED = new Set(["/chat", "/writing", "/speaking"]);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -108,6 +113,7 @@ export function MobileNav({
                         {dueCount}
                       </span>
                     ) : null}
+                    {isFree && PRO_LOCKED.has(href) ? <ProBadge /> : null}
                   </Link>
                 );
               })}
@@ -133,14 +139,17 @@ export function MobileNav({
                   ) : null}
                 </div>
               </Link>
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="w-full text-left rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors"
-                >
-                  ↩ Sign out
-                </button>
-              </form>
+              <LogoutConfirmModal
+                signOutAction={signOutAction}
+                trigger={
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors"
+                  >
+                    ↩ Sign out
+                  </button>
+                }
+              />
             </div>
           </aside>
         </div>

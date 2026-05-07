@@ -5,6 +5,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { MobileNav } from "@/components/nav/mobile-nav";
 import { signOutAction } from "./actions";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
+import { ProBadge } from "@/components/pro-badge";
+import type { Tier } from "@/lib/quotas/limits";
 
 const BASE_NAV_ITEMS = [
   { href: "/dashboard",   label: "Dashboard",   icon: "🏠" },
@@ -34,6 +37,7 @@ export default async function DashboardLayout({
   let dueCount = 0;
   let profile: { first_name: string | null; last_name: string | null; avatar_url: string | null } | null = null;
   let isAuthor = false;
+  let isFree = true;
   if (user) {
     const { count } = await supabase
       .from("user_words")
@@ -54,10 +58,13 @@ export default async function DashboardLayout({
       .select("tier")
       .eq("user_id", user.id)
       .maybeSingle();
-    isAuthor = (sub as { tier?: string } | null)?.tier === "author";
+    const tier = (((sub as { tier?: string } | null)?.tier) ?? "free") as Tier;
+    isAuthor = tier === "author";
+    isFree = tier === "free";
   }
 
   const NAV_ITEMS = isAuthor ? [...BASE_NAV_ITEMS, ADMIN_NAV_ITEM] : BASE_NAV_ITEMS;
+  const PRO_LOCKED = new Set(["/chat", "/writing", "/speaking"]);
 
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   const displayName = fullName || user?.email?.split("@")[0] || "Account";
@@ -91,6 +98,7 @@ export default async function DashboardLayout({
                     {dueCount}
                   </span>
                 )}
+                {isFree && PRO_LOCKED.has(href) && <ProBadge />}
               </Link>
             ))}
           </nav>
@@ -112,11 +120,14 @@ export default async function DashboardLayout({
                 <p className="truncate text-xs text-muted-foreground leading-tight mt-0.5">{user?.email}</p>
               </div>
             </Link>
-            <form action={signOutAction}>
-              <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
-                <span>↩</span> Sign out
-              </Button>
-            </form>
+            <LogoutConfirmModal
+              signOutAction={signOutAction}
+              trigger={
+                <Button type="button" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
+                  <span>↩</span> Sign out
+                </Button>
+              }
+            />
           </div>
         </aside>
 
@@ -130,6 +141,7 @@ export default async function DashboardLayout({
             initials={initials}
             avatarUrl={profile?.avatar_url ?? null}
             signOutAction={signOutAction}
+            isFree={isFree}
           />
           <Link href="/dashboard" className="font-bold text-lg tracking-tight">English</Link>
           {dueCount > 0 ? (
