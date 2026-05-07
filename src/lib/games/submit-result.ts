@@ -3,6 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { ResultBodySchema } from "@/lib/schemas/games";
 import type { GameType } from "@/lib/schemas/games";
 import { grantXp } from "@/lib/engagement/xp";
+import { assertWithinQuota } from "@/lib/quotas/enforce";
+import { QuotaExceededError } from "@/lib/quotas/errors";
+import type { QuotaAction } from "@/lib/quotas/limits";
+
+const GAME_QUOTA_ACTION: Record<GameType, QuotaAction> = {
+  spell: "game_spell",
+  sentence: "game_sentence",
+  synonym: "game_synonym",
+  quiz: "game_quiz",
+};
 
 export async function handleGameResult(req: Request, gameType: GameType): Promise<Response> {
   let body: unknown;
@@ -23,6 +33,15 @@ export async function handleGameResult(req: Request, gameType: GameType): Promis
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  try {
+    await assertWithinQuota(supabase, user.id, GAME_QUOTA_ACTION[gameType]);
+  } catch (err) {
+    if (err instanceof QuotaExceededError) {
+      return NextResponse.json(err.toResponseBody(), { status: 429 });
+    }
+    return NextResponse.json({ error: "quota_check_failed" }, { status: 500 });
+  }
 
   const allWordIds = data.items.map((i) => i.word_id);
 
