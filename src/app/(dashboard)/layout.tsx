@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: "/chat",        label: "AI Chat",      icon: "💬" },
   { href: "/roadmap",     label: "Roadmap",      icon: "🗺️" },
   { href: "/leaderboard", label: "Leaderboard",  icon: "🏆" },
+  { href: "/profile",     label: "Profile",      icon: "👤" },
 ] as const;
 
 export default async function DashboardLayout({

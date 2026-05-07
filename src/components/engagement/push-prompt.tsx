@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
-type SubscriptionState = "idle" | "loading" | "subscribed" | "denied" | "unsupported";
+type SubscriptionState =
+  | "idle"
+  | "loading"
+  | "subscribed"
+  | "denied"
+  | "unsupported"
+  | "no-sw";
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -16,17 +22,28 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return output.buffer as ArrayBuffer;
 }
 
+async function getActiveRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return null;
+  const reg = await navigator.serviceWorker.getRegistration();
+  return reg ?? null;
+}
+
 export function PushPrompt() {
   const [state, setState] = useState<SubscriptionState>("idle");
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [testSent, setTestSent] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
       setState("unsupported");
       return;
     }
-    navigator.serviceWorker.ready.then(async (reg) => {
+    getActiveRegistration().then(async (reg) => {
+      if (!reg) {
+        setState("no-sw");
+        return;
+      }
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         setSubscription(sub);
@@ -37,10 +54,21 @@ export function PushPrompt() {
 
   async function subscribe() {
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    if (!vapidKey) return;
+    if (!vapidKey) {
+      setErrorMsg("Push notifications are not configured.");
+      return;
+    }
+
     setState("loading");
+    setErrorMsg(null);
+
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getActiveRegistration();
+      if (!reg) {
+        setState("no-sw");
+        return;
+      }
+
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
@@ -48,7 +76,7 @@ export function PushPrompt() {
       setSubscription(sub);
 
       const json = sub.toJSON();
-      await fetch("/api/notifications/subscribe", {
+      const res = await fetch("/api/notifications/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -56,9 +84,21 @@ export function PushPrompt() {
           keys: { p256dh: json.keys?.p256dh ?? "", auth: json.keys?.auth ?? "" },
         }),
       });
+
+      if (!res.ok) {
+        setErrorMsg("Failed to save subscription. Try again.");
+        setState("idle");
+        return;
+      }
+
       setState("subscribed");
-    } catch {
-      setState("denied");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "NotAllowedError") {
+        setState("denied");
+      } else {
+        setErrorMsg("Something went wrong. Please try again.");
+        setState("idle");
+      }
     }
   }
 
@@ -81,7 +121,18 @@ export function PushPrompt() {
     setTimeout(() => setTestSent(false), 3000);
   }
 
+  // Browser doesn't support push at all
   if (state === "unsupported") return null;
+
+  // Service worker not registered — only works in production build
+  if (state === "no-sw") {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border bg-card px-5 py-3 text-sm text-muted-foreground">
+        <span className="text-xl">🔔</span>
+        <p>Daily reminders are only available in the production build.</p>
+      </div>
+    );
+  }
 
   if (state === "subscribed") {
     return (
@@ -102,10 +153,19 @@ export function PushPrompt() {
         <span className="text-2xl">🔔</span>
         <div>
           <p className="font-medium">Enable daily reminders</p>
-          <p className="text-sm text-muted-foreground">Stay on track with a nudge each day</p>
+          <p className="text-sm text-muted-foreground">
+            {state === "denied"
+              ? "Notifications blocked — allow them in your browser settings."
+              : "Stay on track with a nudge each day"}
+          </p>
+          {errorMsg && <p className="text-xs text-destructive mt-0.5">{errorMsg}</p>}
         </div>
       </div>
-      <Button size="sm" onClick={subscribe} disabled={state === "loading" || state === "denied"}>
+      <Button
+        size="sm"
+        onClick={subscribe}
+        disabled={state === "loading" || state === "denied"}
+      >
         {state === "loading" ? "Enabling…" : state === "denied" ? "Blocked" : "Enable"}
       </Button>
     </div>
