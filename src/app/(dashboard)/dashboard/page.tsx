@@ -8,6 +8,7 @@ import { StreakStrip } from "@/components/engagement/streak-strip";
 import { BadgeGrid } from "@/components/engagement/badge-grid";
 import { InstallCta } from "@/components/engagement/install-cta";
 import { PushPrompt } from "@/components/engagement/push-prompt";
+import { Greeting } from "./greeting";
 import { Button } from "@/components/ui/button";
 import type { ProgressDashboard } from "@/lib/schemas/progress";
 import type { CefrLevel } from "@/lib/schemas/placement";
@@ -152,9 +153,6 @@ export default async function DashboardPage() {
     .single();
   const firstName = profile?.first_name?.trim() || "";
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-
   const hasAnyActivity =
     stats.words.saved > 0 ||
     stats.grammar.lessons_completed > 0 ||
@@ -164,9 +162,7 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {greeting}{firstName ? `, ${firstName}` : ""}
-          </h1>
+          <Greeting firstName={firstName} />
           <p className="text-sm text-muted-foreground">
             Keep your streak going — let&apos;s learn something new today.
           </p>
