@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { MobileNav } from "@/components/nav/mobile-nav";
 import { signOutAction } from "./actions";
 
 const NAV_ITEMS = [
@@ -108,26 +109,31 @@ export default async function DashboardLayout({
         </aside>
 
         {/* Mobile top bar */}
-        <div className="md:hidden fixed top-0 inset-x-0 z-30 flex h-14 items-center justify-between border-b bg-background px-4">
-          <Link href="/dashboard" className="font-bold text-lg">English</Link>
-          <div className="flex items-center gap-2 overflow-x-auto max-w-[70vw]">
-            {NAV_ITEMS.map(({ href, icon }) => (
-              <Link key={href} href={href} className="text-xl p-1 text-muted-foreground hover:text-foreground relative">
-                {icon}
-                {href === "/review" && dueCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 rounded-full bg-primary text-primary-foreground text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center">
-                    {dueCount > 9 ? "9+" : dueCount}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
+        <div className="md:hidden fixed top-0 inset-x-0 z-30 flex h-14 items-center gap-2 border-b bg-background px-3">
+          <MobileNav
+            items={NAV_ITEMS}
+            dueCount={dueCount}
+            displayName={displayName}
+            email={user?.email ?? null}
+            initials={initials}
+            avatarUrl={profile?.avatar_url ?? null}
+            signOutAction={signOutAction}
+          />
+          <Link href="/dashboard" className="font-bold text-lg tracking-tight">English</Link>
+          {dueCount > 0 ? (
+            <Link
+              href="/review"
+              className="ml-auto rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold"
+            >
+              {dueCount} due
+            </Link>
+          ) : null}
         </div>
 
         {/* Main content */}
         <main className="flex-1 min-w-0">
           <div className="md:hidden h-14" />
-          <div className="container py-8">{children}</div>
+          <div className="container py-6 md:py-8">{children}</div>
         </main>
       </div>
     </QueryProvider>
