@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ReviewBodySchema } from "@/lib/schemas/review";
 import { nextSchedule } from "@/lib/spaced-repetition";
+import { grantXp } from "@/lib/engagement/xp";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -64,5 +65,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "save_failed" }, { status: 500 });
   }
 
+  await grantXp(supabase, { userId: user.id, source: "review", refId: user_word_id });
   return NextResponse.json(schedule, { status: 200 });
 }

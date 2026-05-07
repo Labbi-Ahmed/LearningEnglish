@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { translateTobn } from "@/lib/translate";
 import {
   DictionaryUnavailableError,
   type NormalizedWord,
@@ -17,15 +18,21 @@ export type { NormalizedWord } from "@/lib/dictionary/lookup";
 
 export interface CachedWord extends NormalizedWord {
   id: string;
+  meaning_bn: string | null;
+  example_bn: string | null;
+  word_bn: string | null;
+  synonyms_bn: string[];
+  antonyms_bn: string[];
 }
 
 export async function upsertWordFromDictionary(rawWord: string): Promise<CachedWord> {
   const word = rawWord.trim().toLowerCase();
   const admin = createAdminClient();
 
+  // ── Cache hit path ────────────────────────────────────────────────────────
   const { data: existing, error: readErr } = await admin
     .from("words")
-    .select("id, word, pos, ipa_uk, ipa_us, meaning, example")
+    .select("id, word, pos, ipa_uk, ipa_us, meaning, example, meaning_bn, example_bn, word_bn")
     .eq("word", word)
     .maybeSingle();
 
@@ -36,7 +43,7 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
   if (existing) {
     const { data: relations } = await admin
       .from("word_relations")
-      .select("related_text, relation_type")
+      .select("related_text, related_text_bn, relation_type")
       .eq("word_id", existing.id);
 
     const synonyms = (relations ?? [])
@@ -45,6 +52,12 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
     const antonyms = (relations ?? [])
       .filter((r) => r.relation_type === "antonym")
       .map((r) => r.related_text as string);
+    const synonyms_bn = (relations ?? [])
+      .filter((r) => r.relation_type === "synonym" && r.related_text_bn)
+      .map((r) => r.related_text_bn as string);
+    const antonyms_bn = (relations ?? [])
+      .filter((r) => r.relation_type === "antonym" && r.related_text_bn)
+      .map((r) => r.related_text_bn as string);
 
     return {
       id: existing.id as string,
@@ -54,11 +67,17 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
       ipa_us: (existing.ipa_us as string | null) ?? null,
       meaning: (existing.meaning as string | null) ?? null,
       example: (existing.example as string | null) ?? null,
+      meaning_bn: (existing.meaning_bn as string | null) ?? null,
+      example_bn: (existing.example_bn as string | null) ?? null,
+      word_bn: (existing.word_bn as string | null) ?? null,
       synonyms,
       antonyms,
+      synonyms_bn,
+      antonyms_bn,
     };
   }
 
+  // ── Cache miss path ───────────────────────────────────────────────────────
   const fresh = await lookupWord(word);
 
   const { data: inserted, error: insertErr } = await admin
@@ -80,27 +99,67 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
 
   const wordId = inserted.id as string;
 
+  // Build relation rows (English) first so we can upsert with bn in one pass
   const relationRows = [
-    ...fresh.synonyms.map((t) => ({
-      word_id: wordId,
-      related_text: t,
-      relation_type: "synonym" as const,
-    })),
-    ...fresh.antonyms.map((t) => ({
-      word_id: wordId,
-      related_text: t,
-      relation_type: "antonym" as const,
-    })),
+    ...fresh.synonyms.map((t) => ({ word_id: wordId, related_text: t, relation_type: "synonym" as const })),
+    ...fresh.antonyms.map((t) => ({ word_id: wordId, related_text: t, relation_type: "antonym" as const })),
   ];
 
+  // Translate everything in parallel — non-fatal
+  let meaning_bn: string | null = null;
+  let example_bn: string | null = null;
+  let word_bn: string | null = null;
+  const relations_bn: (string | null)[] = [];
+
+  try {
+    const translateTargets: string[] = [
+      fresh.meaning ?? "",
+      fresh.example ?? "",
+      fresh.word,
+      ...relationRows.map((r) => r.related_text),
+    ];
+
+    const results = await Promise.all(translateTargets.map((t) => (t ? translateTobn(t) : Promise.resolve(null))));
+
+    meaning_bn = results[0] ?? null;
+    example_bn = results[1] ?? null;
+    word_bn = results[2] ?? null;
+    relations_bn.push(...results.slice(3));
+
+    // Update words row with bn fields
+    await admin
+      .from("words")
+      .update({ meaning_bn, example_bn, word_bn })
+      .eq("id", wordId);
+  } catch {
+    // Translation block failed entirely — English data still returned below
+  }
+
+  // Upsert relations with bn translations
   if (relationRows.length > 0) {
+    const rowsWithBn = relationRows.map((r, i) => ({
+      ...r,
+      related_text_bn: relations_bn[i] ?? null,
+    }));
     const { error: relErr } = await admin
       .from("word_relations")
-      .upsert(relationRows, { onConflict: "word_id,related_text,relation_type" });
+      .upsert(rowsWithBn, { onConflict: "word_id,related_text,relation_type" });
     if (relErr) {
       console.error("word_relations insert failed", relErr);
     }
   }
 
-  return { id: wordId, ...fresh };
+  return {
+    id: wordId,
+    ...fresh,
+    meaning_bn,
+    example_bn,
+    word_bn,
+    synonyms_bn: relations_bn
+      .slice(0, fresh.synonyms.length)
+      .filter((v): v is string => v !== null),
+    antonyms_bn: relations_bn
+      .slice(fresh.synonyms.length)
+      .filter((v): v is string => v !== null),
+  };
 }

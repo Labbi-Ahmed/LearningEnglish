@@ -13,6 +13,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const nowIso = new Date().toISOString();
+  const weekAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     profileRes,
@@ -24,8 +25,10 @@ export async function GET() {
     totalLessonsRes,
     speakingRes,
     aiCountRes,
+    weeklyXpRes,
+    badgesRes,
   ] = await Promise.all([
-    supabase.from("profiles").select("level").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("level, streak_count, xp").eq("id", user.id).maybeSingle(),
     supabase.from("user_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase
       .from("user_words")
@@ -55,10 +58,31 @@ export async function GET() {
       .from("ai_conversations")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id),
+    supabase
+      .from("user_xp_events")
+      .select("amount")
+      .eq("user_id", user.id)
+      .gte("created_at", weekAgoIso),
+    supabase
+      .from("user_badges")
+      .select("badge_key, created_at")
+      .eq("user_id", user.id),
   ]);
 
-  const level = ((profileRes.data as { level: string } | null)?.level ??
-    "a1") as CefrLevel;
+  type ProfileRow = { level: string; streak_count: number | null; xp: number | null };
+  const profile = profileRes.data as ProfileRow | null;
+  const level = (profile?.level ?? "a1") as CefrLevel;
+  const streakDays = profile?.streak_count ?? 0;
+  const xpTotal = profile?.xp ?? 0;
+
+  const weeklyXpRows = (weeklyXpRes.data ?? []) as { amount: number }[];
+  const xpThisWeek = weeklyXpRows.reduce((sum, r) => sum + r.amount, 0);
+
+  type BadgeRow = { badge_key: string; created_at: string };
+  const badges = ((badgesRes.data ?? []) as unknown as BadgeRow[]).map((r) => ({
+    key: r.badge_key,
+    earned_at: r.created_at,
+  }));
 
   const games = { spell: 0, sentence: 0, synonym: 0, quiz: 0 } as Record<
     string,
@@ -118,8 +142,13 @@ export async function GET() {
       conversations: aiCountRes.count ?? 0,
     },
     streak: {
-      current_days: 0, // placeholder until Phase 8
+      current_days: streakDays,
     },
+    xp: {
+      total: xpTotal,
+      this_week: xpThisWeek,
+    },
+    badges,
   };
 
   return NextResponse.json(payload, { status: 200 });

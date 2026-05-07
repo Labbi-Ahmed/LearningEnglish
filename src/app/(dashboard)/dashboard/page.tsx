@@ -4,18 +4,22 @@ import { createClient } from "@/lib/supabase/server";
 import { LevelChip } from "@/components/dashboard/level-chip";
 import { StatsPanels } from "@/components/dashboard/stats-panel";
 import { RecommendedNext } from "@/components/dashboard/recommended-next";
+import { StreakStrip } from "@/components/engagement/streak-strip";
+import { BadgeGrid } from "@/components/engagement/badge-grid";
+import { InstallCta } from "@/components/engagement/install-cta";
+import { PushPrompt } from "@/components/engagement/push-prompt";
 import { Button } from "@/components/ui/button";
 import type { ProgressDashboard } from "@/lib/schemas/progress";
 import type { CefrLevel } from "@/lib/schemas/placement";
+import type { Badge } from "@/lib/schemas/engagement";
 
 async function fetchDashboardStats(): Promise<ProgressDashboard | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   const nowIso = new Date().toISOString();
+  const weekAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     profileRes,
@@ -27,8 +31,10 @@ async function fetchDashboardStats(): Promise<ProgressDashboard | null> {
     totalLessonsRes,
     speakingRes,
     aiCountRes,
+    weeklyXpRes,
+    badgesRes,
   ] = await Promise.all([
-    supabase.from("profiles").select("level").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("level, streak_count, xp").eq("id", user.id).maybeSingle(),
     supabase.from("user_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase
       .from("user_words")
@@ -58,10 +64,31 @@ async function fetchDashboardStats(): Promise<ProgressDashboard | null> {
       .from("ai_conversations")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id),
+    supabase
+      .from("user_xp_events")
+      .select("amount")
+      .eq("user_id", user.id)
+      .gte("created_at", weekAgoIso),
+    supabase
+      .from("user_badges")
+      .select("badge_key, created_at")
+      .eq("user_id", user.id),
   ]);
 
-  const level = ((profileRes.data as { level: string } | null)?.level ??
-    "a1") as CefrLevel;
+  type ProfileRow = { level: string; streak_count: number | null; xp: number | null };
+  const profile = profileRes.data as ProfileRow | null;
+  const level = (profile?.level ?? "a1") as CefrLevel;
+  const streakDays = profile?.streak_count ?? 0;
+  const xpTotal = profile?.xp ?? 0;
+
+  const weeklyXpRows = (weeklyXpRes.data ?? []) as { amount: number }[];
+  const xpThisWeek = weeklyXpRows.reduce((sum, r) => sum + r.amount, 0);
+
+  type BadgeRow = { badge_key: string; created_at: string };
+  const badges: Badge[] = ((badgesRes.data ?? []) as unknown as BadgeRow[]).map((r) => ({
+    key: r.badge_key,
+    earned_at: r.created_at,
+  }));
 
   const games = { spell: 0, sentence: 0, synonym: 0, quiz: 0 } as Record<string, number>;
   const totals = { spell: 0, sentence: 0, synonym: 0, quiz: 0 } as Record<string, number>;
@@ -104,15 +131,15 @@ async function fetchDashboardStats(): Promise<ProgressDashboard | null> {
     },
     speaking: { attempts: speakingRows.length, avg_accuracy: speakingAvg },
     ai: { conversations: aiCountRes.count ?? 0 },
-    streak: { current_days: 0 },
+    streak: { current_days: streakDays },
+    xp: { total: xpTotal, this_week: xpThisWeek },
+    badges,
   };
 }
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const stats = await fetchDashboardStats();
@@ -142,6 +169,15 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <StreakStrip
+        currentDays={stats.streak.current_days}
+        xpTotal={stats.xp.total}
+        xpThisWeek={stats.xp.this_week}
+      />
+
+      <InstallCta />
+      <PushPrompt />
+
       {stats.level === "a1" && !hasAnyActivity && (
         <div className="rounded-xl border bg-primary/5 p-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
@@ -159,6 +195,8 @@ export default async function DashboardPage() {
       <RecommendedNext stats={stats} hasAnyActivity={hasAnyActivity} />
 
       <StatsPanels stats={stats} />
+
+      <BadgeGrid badges={stats.badges} />
     </div>
   );
 }

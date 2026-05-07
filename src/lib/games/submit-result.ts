@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ResultBodySchema } from "@/lib/schemas/games";
 import type { GameType } from "@/lib/schemas/games";
+import { grantXp } from "@/lib/engagement/xp";
 
 export async function handleGameResult(req: Request, gameType: GameType): Promise<Response> {
   let body: unknown;
@@ -58,5 +59,6 @@ export async function handleGameResult(req: Request, gameType: GameType): Promis
   // Phase 4: SM-2 (`repetitions`/`ease_factor`) is now the mastery signal,
   // updated by the dedicated review flow. Game results no longer bump
   // `mastery_level` — it lingers as a derived display value.
+  await grantXp(supabase, { userId: user.id, source: "game", refId: session.id });
   return NextResponse.json({ session_id: session.id }, { status: 201 });
 }
