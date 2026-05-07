@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
+import { ProBadge } from "@/components/pro-badge";
 
 type NavItem = {
   href: string;
@@ -19,6 +20,7 @@ type Props = {
   initials: string;
   avatarUrl: string | null;
   signOutAction: () => void | Promise<void>;
+  isFree: boolean;
 };
 
 export function MobileNav({
@@ -29,7 +31,9 @@ export function MobileNav({
   initials,
   avatarUrl,
   signOutAction,
+  isFree,
 }: Props) {
+  const PRO_LOCKED = new Set(["/chat", "/writing", "/speaking"]);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -109,6 +113,7 @@ export function MobileNav({
                         {dueCount}
                       </span>
                     ) : null}
+                    {isFree && PRO_LOCKED.has(href) ? <ProBadge /> : null}
                   </Link>
                 );
               })}

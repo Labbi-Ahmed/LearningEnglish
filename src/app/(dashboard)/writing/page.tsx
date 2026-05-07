@@ -2,11 +2,23 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { WritingEditor } from "./writing-editor";
 import { QuotaIndicator } from "@/components/quota/quota-indicator";
+import { getTier } from "@/lib/quotas/get-tier";
+import { ProGate } from "@/components/pro-gate";
 
 export default async function WritingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const tier = await getTier(supabase, user.id);
+  if (tier === "free") {
+    return (
+      <ProGate
+        feature="Writing Feedback"
+        description="Get AI-powered grammar feedback on your writing and rephrase individual sentences with one click."
+      />
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
