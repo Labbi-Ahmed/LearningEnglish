@@ -145,6 +145,16 @@ export default async function DashboardPage() {
   const stats = await fetchDashboardStats();
   if (!stats) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("first_name")
+    .eq("id", user.id)
+    .single();
+  const firstName = profile?.first_name?.trim() || "";
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
   const hasAnyActivity =
     stats.words.saved > 0 ||
     stats.grammar.lessons_completed > 0 ||
@@ -154,9 +164,11 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Welcome back</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {greeting}{firstName ? `, ${firstName}` : ""}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Signed in as <span className="font-medium">{user.email}</span>
+            Keep your streak going — let&apos;s learn something new today.
           </p>
         </div>
         <div className="flex items-center gap-3">
