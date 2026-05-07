@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { MobileNav } from "@/components/nav/mobile-nav";
 import { signOutAction } from "./actions";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 
 const BASE_NAV_ITEMS = [
   { href: "/dashboard",   label: "Dashboard",   icon: "🏠" },
@@ -112,11 +113,14 @@ export default async function DashboardLayout({
                 <p className="truncate text-xs text-muted-foreground leading-tight mt-0.5">{user?.email}</p>
               </div>
             </Link>
-            <form action={signOutAction}>
-              <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
-                <span>↩</span> Sign out
-              </Button>
-            </form>
+            <LogoutConfirmModal
+              signOutAction={signOutAction}
+              trigger={
+                <Button type="button" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
+                  <span>↩</span> Sign out
+                </Button>
+              }
+            />
           </div>
         </aside>
 

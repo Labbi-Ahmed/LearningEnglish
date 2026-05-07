@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 
 type NavItem = {
   href: string;
@@ -133,14 +134,17 @@ export function MobileNav({
                   ) : null}
                 </div>
               </Link>
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="w-full text-left rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors"
-                >
-                  ↩ Sign out
-                </button>
-              </form>
+              <LogoutConfirmModal
+                signOutAction={signOutAction}
+                trigger={
+                  <button
+                    type="button"
+                    className="w-full text-left rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent transition-colors"
+                  >
+                    ↩ Sign out
+                  </button>
+                }
+              />
             </div>
           </aside>
         </div>
