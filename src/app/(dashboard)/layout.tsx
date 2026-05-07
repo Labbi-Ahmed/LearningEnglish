@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { signOutAction } from "./actions";
 
@@ -27,6 +28,7 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   let dueCount = 0;
+  let profile: { first_name: string | null; last_name: string | null; avatar_url: string | null } | null = null;
   if (user) {
     const { count } = await supabase
       .from("user_words")
@@ -34,7 +36,21 @@ export default async function DashboardLayout({
       .eq("user_id", user.id)
       .lte("next_review_at", new Date().toISOString());
     dueCount = Math.min(count ?? 0, 99);
+
+    const { data } = await supabase
+      .from("profiles")
+      .select("first_name, last_name, avatar_url")
+      .eq("id", user.id)
+      .single();
+    profile = data;
   }
+
+  const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
+  const displayName = fullName || user?.email?.split("@")[0] || "Account";
+  const initials =
+    (profile?.first_name?.[0] ?? "") + (profile?.last_name?.[0] ?? "")
+      || user?.email?.[0]?.toUpperCase()
+      || "U";
 
   return (
     <QueryProvider>
@@ -66,8 +82,22 @@ export default async function DashboardLayout({
           </nav>
 
           {/* Account block */}
-          <div className="border-t px-3 py-3 space-y-1">
-            <p className="truncate px-2 text-xs text-muted-foreground">{user?.email}</p>
+          <div className="border-t px-3 py-3 space-y-2">
+            <Link
+              href="/profile"
+              className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors"
+            >
+              <Avatar className="h-9 w-9 shrink-0">
+                {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={displayName} /> : null}
+                <AvatarFallback className="text-xs font-medium uppercase">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium leading-tight">{displayName}</p>
+                <p className="truncate text-xs text-muted-foreground leading-tight mt-0.5">{user?.email}</p>
+              </div>
+            </Link>
             <form action={signOutAction}>
               <Button type="submit" variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground">
                 <span>↩</span> Sign out
