@@ -2,11 +2,23 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ChatWindow } from "./chat-window";
 import { QuotaIndicator } from "@/components/quota/quota-indicator";
+import { getTier } from "@/lib/quotas/get-tier";
+import { ProGate } from "@/components/pro-gate";
 
 export default async function ChatPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const tier = await getTier(supabase, user.id);
+  if (tier === "free") {
+    return (
+      <ProGate
+        feature="AI Tutor Chat"
+        description="Chat with an AI English tutor to practise conversation, ask grammar questions, and get instant feedback."
+      />
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">

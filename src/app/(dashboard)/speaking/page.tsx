@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Recorder } from "./recorder";
+import { getTier } from "@/lib/quotas/get-tier";
+import { ProGate } from "@/components/pro-gate";
 
 type Recording = {
   id: string;
@@ -32,6 +34,16 @@ export default async function SpeakingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const tier = await getTier(supabase, user.id);
+  if (tier === "free") {
+    return (
+      <ProGate
+        feature="Speaking Practice"
+        description="Record yourself reading English prompts and receive an AI accuracy score to track your pronunciation progress."
+      />
+    );
+  }
 
   const history = await fetchHistory(user.id);
 

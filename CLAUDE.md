@@ -38,11 +38,39 @@ A free, public English learning web app (A1 → C2). Vocabulary, games, grammar,
 
 ---
 
-## Code conventions
+## TypeScript
 
 - TypeScript strict mode ON. No `any` without an explicit `// FIXME`.
-- Server Components by default; add `"use client"` only when needed.
 - Zod schemas for ALL API input validation.
+- After writing or editing any TypeScript file, run `npm run typecheck`. If it fails, invoke the `/ts-fix` skill immediately — do not leave type errors unresolved.
+- The `/ts-fix` skill is always available and should be used proactively: whenever `tsc` reports errors, `noUncheckedIndexedAccess` fires, or Supabase response types mismatch, run `/ts-fix` before moving on.
+
+---
+
+## Responsive design (REQUIRED — no exceptions)
+
+Every component, page, and feature MUST work correctly at all three breakpoints:
+
+| Breakpoint | Tailwind prefix | Min width |
+|---|---|---|
+| Mobile | *(default)* | 0 px |
+| Tablet | `md:` | 768 px |
+| Desktop | `lg:` | 1024 px |
+
+Rules:
+- Design mobile-first: base classes are mobile, use `md:` and `lg:` to scale up.
+- No fixed pixel widths on layout containers — use `w-full`, `max-w-*`, or `flex`/`grid`.
+- Touch targets must be at least 44 × 44 px on mobile (`min-h-11 min-w-11`).
+- Navigation: mobile uses the `MobileNav` drawer; desktop uses the sidebar — never show both simultaneously.
+- Tables and data-heavy views must scroll horizontally on mobile (`overflow-x-auto`) rather than overflow the viewport.
+- Before marking any task done, manually test or visually verify the feature at mobile (375 px), tablet (768 px), and desktop (1280 px) widths using browser DevTools.
+- If a component cannot be made responsive without a significant redesign, pause and discuss before proceeding.
+
+---
+
+## Code conventions
+
+- Server Components by default; add `"use client"` only when needed.
 - Tailwind utilities; no inline `style={{}}` unless dynamic.
 - File names: `kebab-case.ts` for files, `PascalCase` for React components.
 - Imports: `@/` alias for `src/`.
