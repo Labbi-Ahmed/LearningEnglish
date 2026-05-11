@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { savedListKey } from "./keys";
+import { savedListKey, savedSetKey } from "./keys";
 import { safeDel, safeGet, safeSet } from "./redis";
 import { hydrateSavedSet } from "./saved-set";
 
@@ -40,6 +40,17 @@ export async function putSavedListInCache(
 
 export async function invalidateSavedList(userId: string): Promise<void> {
   await safeDel(savedListKey(userId));
+}
+
+/**
+ * Removes every per-user cache entry for the given user. Called on logout
+ * to keep Redis tidy and avoid leaving entries on shared devices.
+ */
+export async function clearUserCaches(userId: string): Promise<void> {
+  await Promise.all([
+    safeDel(savedListKey(userId)),
+    safeDel(savedSetKey(userId)),
+  ]);
 }
 
 /**

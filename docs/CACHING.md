@@ -96,6 +96,17 @@ The lock self-clears after 5 minutes if a run crashes.
 
 `/api/cache/warm` only refills the shared `word:*` dictionary keys.
 
+## Logout
+
+The `signOutAction` server action (`src/app/(dashboard)/actions.ts`) reads the
+user id, signs out of Supabase, then schedules `clearUserCaches(userId)` via
+Next's `after()`. Both `user:<id>:words:list` and `user:<id>:saved` are
+deleted from Redis after the redirect response is sent. The next login
+re-populates them via sign-in hydration.
+
+Keys are deterministic per `auth.users.id`, so a re-login never creates a
+duplicate entry — sign-in hydration always SETs over the same key.
+
 ## Per-user cache hydration
 
 Per-user caches (`user:<id>:words:list`, `user:<id>:saved`) are populated by
