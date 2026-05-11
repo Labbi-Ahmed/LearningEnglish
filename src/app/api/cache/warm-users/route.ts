@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { redis, safeDel, safeSetNxEx } from "@/lib/cache/redis";
 import { warmActiveUserCaches } from "@/lib/cache/warm-users";
+import { writeLastRun } from "@/lib/cache/run-log";
 
 const LOCK_KEY = "cache:warm-users:lock";
 const LOCK_TTL_SECONDS = 10 * 60;
@@ -28,6 +29,7 @@ async function handle(req: Request) {
 
   try {
     const result = await warmActiveUserCaches();
+    await writeLastRun("users", "cron", result);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[cache:warm-users] failed", err);

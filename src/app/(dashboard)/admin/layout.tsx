@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ForbiddenError, UnauthorizedError } from "@/lib/auth/errors";
 import { requireAuthor } from "@/lib/auth/require-author";
+import { AdminSubNav } from "./admin-subnav";
 
 export default async function AdminLayout({
   children,
@@ -22,6 +23,7 @@ export default async function AdminLayout({
         <h1 className="text-2xl font-bold tracking-tight">Admin</h1>
         <p className="text-sm text-muted-foreground">Author-only tools.</p>
       </header>
+      <AdminSubNav />
       {children}
     </div>
   );

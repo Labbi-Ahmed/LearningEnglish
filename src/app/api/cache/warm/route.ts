@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { redis, safeDel, safeSetNxEx } from "@/lib/cache/redis";
 import { warmWordCache } from "@/lib/cache/warm";
+import { writeLastRun } from "@/lib/cache/run-log";
 
 const LOCK_KEY = "cache:warm:lock";
 const LOCK_TTL_SECONDS = 5 * 60;
@@ -28,6 +29,7 @@ async function handle(req: Request) {
 
   try {
     const result = await warmWordCache();
+    await writeLastRun("words", "cron", result);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[cache:warm] failed", err);

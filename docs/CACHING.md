@@ -47,6 +47,29 @@ SMEMBERS user:00000000-0000-0000-0000-000000000000:saved
 TTL word:hello
 ```
 
+## Admin controls
+
+Authors get a `/admin/cache` page with two buttons that trigger the same
+warming helpers as the cron jobs:
+
+- **Warm dictionary** → `POST /api/admin/cache/warm-words` → `warmWordCache()`
+- **Warm user caches** → `POST /api/admin/cache/warm-users` → `warmActiveUserCaches()`
+
+These endpoints are gated by `requireAuthor()`, NOT by `CRON_SECRET`, so the
+browser never sees the cron secret. They share the same single-flight locks
+as the cron routes, so an admin click during a scheduled run gets
+`{ already_running: true }`.
+
+Each successful run — admin OR cron — writes a JSON record to Redis:
+
+| Key | Contents |
+|-----|----------|
+| `cache:warm:last` | `{ ranAt, actorId, result }` for the dictionary job |
+| `cache:warm-users:last` | `{ ranAt, actorId, result }` for the per-user job |
+
+`actorId` is `"cron"` for scheduled runs or the admin's user id for manual
+runs. The `/admin/cache` page reads these and shows the last run inline.
+
 ## Pre-warming on deploy
 
 The runtime cache fills lazily; after a deploy or a Redis flush the first

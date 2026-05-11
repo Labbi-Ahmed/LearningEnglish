@@ -36,6 +36,12 @@ update user_subscriptions
  where user_id = (select id from auth.users where email = 'YOU@example.com');
 ```
 
+## Cache controls
+
+Authors also get a `/admin/cache` sub-page (sibling tab next to "Users") for
+manually triggering the Redis warming jobs and viewing each job's last run.
+See `docs/CACHING.md` → "Admin controls" for details.
+
 ## Adding new per-user tables
 
 Any new per-user table MUST declare `references auth.users(id) on delete cascade`
