@@ -12,6 +12,7 @@ import {
   isWordSavedCached,
   removeFromSavedCache,
 } from "@/lib/cache/saved-set";
+import { invalidateSavedList } from "@/lib/cache/saved-list";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -128,5 +129,6 @@ export async function DELETE(
   if (deletedWordId) {
     await removeFromSavedCache(user.id, deletedWordId);
   }
+  await invalidateSavedList(user.id);
   return new NextResponse(null, { status: 204 });
 }

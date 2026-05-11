@@ -1,9 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { hydrateUserCachesAfterSignIn } from "@/lib/cache/saved-list";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -26,11 +28,16 @@ export async function signInAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
     console.error("[signIn] supabase error", error);
     return { error: "Invalid email or password." };
+  }
+
+  const userId = data.user?.id;
+  if (userId) {
+    after(() => hydrateUserCachesAfterSignIn(userId));
   }
 
   redirect("/dashboard");

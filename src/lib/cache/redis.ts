@@ -106,3 +106,27 @@ export async function safeExpire(
     logError(`expire ${key}`, err);
   }
 }
+
+export async function safeSetNxEx(
+  key: string,
+  value: string,
+  ttlSeconds: number,
+): Promise<boolean> {
+  if (!redis) return false;
+  try {
+    const r = await redis.set(key, value, { nx: true, ex: ttlSeconds });
+    return r === "OK";
+  } catch (err) {
+    logError(`set nx ${key}`, err);
+    return false;
+  }
+}
+
+export async function safeDel(key: string): Promise<void> {
+  if (!redis) return;
+  try {
+    await redis.del(key);
+  } catch (err) {
+    logError(`del ${key}`, err);
+  }
+}

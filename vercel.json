@@ -7,6 +7,14 @@
     {
       "path": "/api/cron/weekly-summary",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cache/warm",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cache/warm-users",
+      "schedule": "30 3 * * *"
     }
   ]
 }
