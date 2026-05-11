@@ -7,6 +7,7 @@ import {
   type NormalizedWord,
   lookupWord,
 } from "@/lib/dictionary/lookup";
+import { getWordFromCache, putWordInCache } from "@/lib/cache/word-cache";
 
 export {
   WordNotFoundError,
@@ -27,6 +28,11 @@ export interface CachedWord extends NormalizedWord {
 
 export async function upsertWordFromDictionary(rawWord: string): Promise<CachedWord> {
   const word = rawWord.trim().toLowerCase();
+
+  // ── Redis cache short-circuit ─────────────────────────────────────────────
+  const cached = await getWordFromCache(word);
+  if (cached) return cached;
+
   const admin = createAdminClient();
 
   // ── Cache hit path ────────────────────────────────────────────────────────
@@ -59,7 +65,7 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
       .filter((r) => r.relation_type === "antonym" && r.related_text_bn)
       .map((r) => r.related_text_bn as string);
 
-    return {
+    const dbResult: CachedWord = {
       id: existing.id as string,
       word: existing.word as string,
       pos: (existing.pos as string | null) ?? null,
@@ -75,6 +81,8 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
       synonyms_bn,
       antonyms_bn,
     };
+    await putWordInCache(word, dbResult);
+    return dbResult;
   }
 
   // ── Cache miss path ───────────────────────────────────────────────────────
@@ -149,7 +157,7 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
     }
   }
 
-  return {
+  const freshResult: CachedWord = {
     id: wordId,
     ...fresh,
     meaning_bn,
@@ -162,4 +170,6 @@ export async function upsertWordFromDictionary(rawWord: string): Promise<CachedW
       .slice(fresh.synonyms.length)
       .filter((v): v is string => v !== null),
   };
+  await putWordInCache(word, freshResult);
+  return freshResult;
 }

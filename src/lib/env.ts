@@ -26,6 +26,10 @@ export const env = {
   VAPID_SUBJECT: process.env.VAPID_SUBJECT ?? "mailto:admin@englishapp.com",
   CRON_SECRET: process.env.CRON_SECRET,
   APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  // Cache — optional. If unset the Redis cache silently no-ops and routes
+  // fall through to the database.
+  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
 };
 
 export function getServiceRoleKey(): string {

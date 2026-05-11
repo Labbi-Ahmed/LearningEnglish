@@ -107,6 +107,8 @@ Rules:
 
 Cache everything possible. A word looked up once should live in the `words` table forever — never call the Free Dictionary API for a word we already have. Same logic applies to AI calls: dedupe and cache where it makes sense. If a free-tier limit is approached, surface a friendly user-facing error rather than crashing.
 
+On top of the `words` DB cache, the app uses Upstash Redis (free tier) as an accelerator for `words` JSON and per-user saved-word ID sets. It is **soft-fail**: missing `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` or any Redis error logs `[cache:redis] …` and falls through to the DB. Always write the DB first, then Redis. See `docs/CACHING.md` for keys, TTLs, and invalidation rules.
+
 ---
 
 ## Out of scope for v1

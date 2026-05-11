@@ -105,6 +105,8 @@ export function VocabularySearch({
     queryFn: () => fetchWord(activeWord as string),
     enabled: Boolean(activeWord) && !selectedSaved && !externalSaved,
     retry: false,
+    staleTime: 24 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 
   const exactSavedMatch = useMemo(() => {

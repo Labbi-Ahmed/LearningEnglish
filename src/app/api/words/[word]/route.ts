@@ -7,6 +7,11 @@ import {
   WordNotFoundError,
   upsertWordFromDictionary,
 } from "@/lib/dictionary";
+import {
+  hydrateSavedSet,
+  isWordSavedCached,
+  removeFromSavedCache,
+} from "@/lib/cache/saved-set";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,11 +42,30 @@ export async function GET(
   try {
     const cached = await upsertWordFromDictionary(parsed.data);
 
-    const { count } = await supabase
-      .from("user_words")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("word_id", cached.id);
+    let saved: boolean;
+    const cacheAnswer = await isWordSavedCached(user.id, cached.id);
+    if (cacheAnswer !== null) {
+      saved = cacheAnswer;
+    } else {
+      const { count } = await supabase
+        .from("user_words")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("word_id", cached.id);
+      saved = (count ?? 0) > 0;
+
+      // Lazy hydrate the saved-set for subsequent requests. Fire and forget.
+      void (async () => {
+        const { data: rows } = await supabase
+          .from("user_words")
+          .select("word_id")
+          .eq("user_id", user.id);
+        const ids = (rows ?? [])
+          .map((r) => (r as { word_id?: string }).word_id)
+          .filter((v): v is string => Boolean(v));
+        await hydrateSavedSet(user.id, ids);
+      })().catch((err) => console.error("[cache:redis] hydrate saved set", err));
+    }
 
     return NextResponse.json({
       word: cached.word,
@@ -57,7 +81,7 @@ export async function GET(
       synonyms_bn: cached.synonyms_bn,
       antonyms_bn: cached.antonyms_bn,
       word_id: cached.id,
-      saved: (count ?? 0) > 0,
+      saved,
     });
   } catch (err) {
     if (err instanceof WordNotFoundError) {
@@ -90,10 +114,19 @@ export async function DELETE(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase.from("user_words").delete().eq("id", parsed.data);
+  const { data: deleted, error } = await supabase
+    .from("user_words")
+    .delete()
+    .eq("id", parsed.data)
+    .select("word_id")
+    .maybeSingle();
   if (error) {
     console.error("user_words delete failed", error);
     return NextResponse.json({ error: "delete_failed" }, { status: 500 });
+  }
+  const deletedWordId = (deleted as { word_id?: string } | null)?.word_id;
+  if (deletedWordId) {
+    await removeFromSavedCache(user.id, deletedWordId);
   }
   return new NextResponse(null, { status: 204 });
 }

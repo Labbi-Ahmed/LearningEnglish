@@ -9,6 +9,7 @@ import {
 } from "@/lib/dictionary";
 import { assertWithinQuota } from "@/lib/quotas/enforce";
 import { QuotaExceededError } from "@/lib/quotas/errors";
+import { addToSavedCache } from "@/lib/cache/saved-set";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -76,5 +77,6 @@ export async function POST(req: Request) {
   }
 
   const already = inserted === null;
+  await addToSavedCache(user.id, wordId);
   return NextResponse.json({ saved: true, already, word_id: wordId });
 }
